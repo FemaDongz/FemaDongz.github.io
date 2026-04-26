@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FemzLabs Provider Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card { background: #1e1e1e; border: 1px solid #333; }
+        body { background: #0f0f0f; color: #e0e0e0; }
+    </style>
+</head>
+<body class="p-8">
+    <h1 class="text-2xl font-bold mb-6 border-b border-gray-700 pb-2">🚀 FemzLabs AI Provider Tracker</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card p-6 rounded-lg">
+            <h2 class="text-xl mb-4 text-blue-400">Settings</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm">Provider</label>
+                    <select id="provider" class="w-full bg-gray-800 p-2 rounded border border-gray-600">
+                        <option value="nvidia">NVIDIA Build (Free/Paid)</option>
+                        <option value="github">GitHub Copilot (Legacy Codex Path)</option>
+                        <option value="openai">OpenAI Official</option>
+                        <option value="gemini">Google Gemini</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm">API Key / Token</label>
+                    <input type="password" id="apiKey" placeholder="Masukkan token..." class="w-full bg-gray-800 p-2 rounded border border-gray-600">
+                </div>
+                <button onclick="checkModels()" class="bg-blue-600 hover:bg-blue-700 w-full py-2 rounded font-bold transition">Cek Model Tersedia</button>
+            </div>
+        </div>
+
+        <div class="card p-6 rounded-lg overflow-hidden flex flex-col">
+            <h2 class="text-xl mb-4 text-green-400">Available Models</h2>
+            <div id="status" class="text-sm italic text-gray-500 mb-2">Pilih provider dan klik cek...</div>
+            <div id="modelList" class="bg-black p-4 rounded border border-gray-700 h-64 overflow-y-auto text-xs font-mono">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        async function checkModels() {
+            const provider = document.getElementById('provider').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const listDiv = document.getElementById('modelList');
+            const statusDiv = document.getElementById('status');
+
+            if (!apiKey) return alert("Isi API Key dulu!");
+
+            listDiv.innerHTML = "Memuat data...";
+            statusDiv.innerText = "Sedang menghubungi endpoint " + provider + "...";
+
+            let url = "";
+            let headers = { "Content-Type": "application/json" };
+
+            // LOGIKA DARI REPO 9ROUTER
+            if (provider === "nvidia") {
+                url = "https://integrate.api.nvidia.com/v1/models";
+                headers["Authorization"] = `Bearer ${apiKey}`;
+            } else if (provider === "github") {
+                url = "https://api.githubcopilot.com/models";
+                headers["Authorization"] = `Bearer ${apiKey}`;
+                headers["Copilot-Integration-Id"] = "vscode-chat";
+                headers["editor-version"] = "vscode/1.107.1";
+            } else if (provider === "openai") {
+                url = "https://api.openai.com/v1/models";
+                headers["Authorization"] = `Bearer ${apiKey}`;
+            } else if (provider === "gemini") {
+                url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
+            }
+
+            try {
+                const response = await fetch(url, { method: "GET", headers: headers });
+                const data = await response.json();
+
+                // Parsing data sesuai format provider (seperti di parseOpenAIStyleModels)
+                let models = data.data || data.models || data || [];
+                
+                if (models.length === 0) {
+                    listDiv.innerHTML = "Tidak ada model ditemukan atau API Key salah.";
+                } else {
+                    listDiv.innerHTML = "";
+                    models.forEach(m => {
+                        const id = m.id || m.name || m;
+                        const item = document.createElement('div');
+                        item.className = "p-1 border-b border-gray-800 hover:bg-gray-900";
+                        item.innerText = "> " + (typeof id === 'string' ? id : JSON.stringify(id));
+                        listDiv.appendChild(item);
+                    });
+                    statusDiv.innerText = `Berhasil menarik ${models.length} model!`;
+                }
+            } catch (err) {
+                listDiv.innerHTML = `<span class="text-red-500">Error: ${err.message}\n\nTips: Jika error 'CORS', jalankan browser dengan mode --disable-web-security atau gunakan extension Moesif CORS.</span>`;
+                statusDiv.innerText = "Gagal mengambil data.";
+            }
+        }
+    </script>
+</body>
+</html>
